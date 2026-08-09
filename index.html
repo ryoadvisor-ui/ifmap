@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="判断や作業手順を、かんたんに作成・共有できる静的Webアプリ">
+  <title>カスタムフローチャート</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <button id="mapsButton" class="brand-button" type="button" aria-label="マップ一覧を開く">
+        <span class="brand-mark">CF</span><span>カスタムフローチャート</span>
+      </button>
+      <div class="map-heading">
+        <span class="eyebrow">いま開いているマップ</span>
+        <button id="mapTitleButton" class="map-title-button" type="button"></button>
+      </div>
+      <nav class="mode-switch" aria-label="表示モード">
+        <button type="button" data-mode="list">一覧</button>
+        <button type="button" data-mode="edit" class="active">編集</button>
+        <button type="button" data-mode="run">実行</button>
+      </nav>
+      <div class="top-actions">
+        <button id="undoButton" class="icon-button edit-only" type="button" title="元に戻す" aria-label="元に戻す">↶</button>
+        <button id="redoButton" class="icon-button edit-only" type="button" title="やり直す" aria-label="やり直す">↷</button>
+        <button id="tutorialButton" class="button tutorial-button" type="button">？ 使い方</button>
+        <button id="printButton" class="button" type="button">印刷</button>
+        <button id="moreButton" class="button secondary edit-only" type="button">保存・読込</button>
+      </div>
+    </header>
+
+    <section id="listPage" class="list-page" hidden>
+      <div class="list-page-head">
+        <div><span class="eyebrow">すべての保存済みマップ</span><h1>フロー一覧</h1><p>各フローの最初と、次に対応する項目をまとめて確認できます。</p></div>
+        <label class="list-sort">並べ替え<select id="listSort"><option value="status">状態順</option><option value="startDate">開始日が早い順</option><option value="dueDate">完了日が早い順</option><option value="updated">更新が新しい順</option></select></label>
+      </div>
+      <div id="listSummary" class="list-summary"></div>
+      <div id="flowList" class="flow-list"></div>
+    </section>
+
+    <main id="workspace" class="workspace">
+      <aside class="toolbox edit-only" aria-label="項目の追加">
+        <div>
+          <span class="eyebrow">フロー編集</span>
+          <h2>作成</h2>
+        </div>
+        <button class="node-tool process create-item-button" data-add-type="process" type="button"><span>＋</span><b>項目を作成</b></button>
+        <p class="tool-hint">作成後、カードをクリックして内容・状態・接続先を編集できます。分岐が必要な項目だけ選択肢を追加します。</p>
+      </aside>
+
+      <section class="canvas-wrap" id="canvasWrap">
+        <div class="canvas-toolbar">
+          <span id="modeHint">カードをドラッグして並べ替え</span>
+          <div class="zoom-controls">
+            <button id="zoomOutButton" type="button" aria-label="縮小">−</button>
+            <button id="zoomResetButton" type="button" aria-label="表示倍率を戻す">100%</button>
+            <button id="zoomInButton" type="button" aria-label="拡大">＋</button>
+          </div>
+        </div>
+        <div id="emptyState" class="empty-state" hidden>
+          <div class="empty-icon">＋</div>
+          <h2>最初の項目を追加しましょう</h2>
+          <p>左の「項目を作成」から、流れを作り始められます。</p>
+        </div>
+        <div id="viewport" class="viewport" tabindex="0" aria-label="フローマップ編集領域">
+          <div id="world" class="world">
+            <svg id="connections" class="connections" width="3200" height="2400" aria-hidden="true">
+              <defs>
+                <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <path d="M0,0 L9,3.5 L0,7 Z" fill="#8b98a9"></path>
+                </marker>
+                <marker id="arrow-active" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <path d="M0,0 L9,3.5 L0,7 Z" fill="#2563eb"></path>
+                </marker>
+              </defs>
+              <g id="edgeLayer"></g>
+            </svg>
+            <div id="nodeLayer"></div>
+          </div>
+        </div>
+        <div id="selectionBox" class="selection-box" hidden></div>
+        <div class="canvas-help edit-only">余白をドラッグして移動 · カードをドラッグして並べ替え</div>
+      </section>
+
+      <aside id="inspector" class="inspector edit-only" aria-label="項目の編集">
+        <div id="inspectorEmpty" class="inspector-empty">
+          <div class="inspector-empty-icon">☝</div>
+          <h2>項目を選んでください</h2>
+          <p>カードをクリックすると、ここで内容や接続先を変更できます。</p>
+        </div>
+        <form id="nodeForm" hidden>
+          <div class="inspector-head">
+            <div><span class="eyebrow">選択中の項目</span><h2>内容を編集</h2></div>
+            <button id="closeInspector" class="icon-button" type="button" aria-label="編集欄を閉じる">×</button>
+          </div>
+          <label>状態<select id="nodeStatus"><option value="unprocessed">未処理</option><option value="processing">処理中</option><option value="done">処理済み</option></select></label>
+          <label>タイトル<input id="nodeTitle" type="text" maxlength="100" placeholder="例：申請書を確認する"></label>
+          <label>説明<textarea id="nodeDescription" rows="4" maxlength="1000" placeholder="補足があれば入力"></textarea></label>
+          <div class="date-field">
+            <span class="date-field-label">開始日</span>
+            <div class="date-parts" aria-label="開始日">
+              <label><input id="startYear" type="number" inputmode="numeric" min="2000" max="2100" placeholder="2026"><span>年</span></label>
+              <label><input id="startMonth" type="number" inputmode="numeric" min="1" max="12" placeholder="8"><span>月</span></label>
+              <label><input id="startDay" type="number" inputmode="numeric" min="1" max="31" placeholder="9"><span>日</span></label>
+            </div>
+          </div>
+          <div class="date-field">
+            <span class="date-field-label">完了日（期限）</span>
+            <div class="date-parts" aria-label="完了日">
+              <label><input id="dueYear" type="number" inputmode="numeric" min="2000" max="2100" placeholder="2026"><span>年</span></label>
+              <label><input id="dueMonth" type="number" inputmode="numeric" min="1" max="12" placeholder="8"><span>月</span></label>
+              <label><input id="dueDay" type="number" inputmode="numeric" min="1" max="31" placeholder="31"><span>日</span></label>
+            </div>
+          </div>
+          <section id="simpleConnection" class="form-section">
+            <div class="section-title">次の項目</div>
+            <select id="nodeTarget"></select>
+            <p class="connection-help">カード下の出口から、別カード上の入口へドラッグしても接続できます。</p>
+          </section>
+          <section id="questionOptions" class="form-section" hidden>
+            <div class="section-row"><div class="section-title">分岐の選択肢</div><button id="addOptionButton" class="text-button" type="button">＋ 選択肢を追加</button></div>
+            <p class="connection-help">分岐が必要な場合だけ追加します。選択肢ごとにカード下へ出口が表示されます。</p>
+            <div id="optionsList"></div>
+          </section>
+          <div class="inspector-actions">
+            <button id="duplicateNodeButton" class="button secondary" type="button">複製</button>
+            <button id="deleteNodeButton" class="button danger-ghost" type="button">削除</button>
+          </div>
+        </form>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="mapsDialog" class="dialog wide-dialog">
+    <div class="dialog-head"><div><span class="eyebrow">保存済みマップ</span><h2>マップを選ぶ</h2></div><button class="dialog-close icon-button" type="button" aria-label="閉じる">×</button></div>
+    <div class="new-map-row"><button id="newMapButton" class="button primary" type="button">＋ 新規作成</button><p>この端末に自動保存されます</p></div>
+    <div id="mapList" class="map-list"></div>
+  </dialog>
+
+  <dialog id="newMapDialog" class="dialog">
+    <form id="newMapForm">
+      <div class="dialog-head"><div><span class="eyebrow">新しいマップ</span><h2>ひな形を選ぶ</h2></div><button class="dialog-close icon-button" type="button" aria-label="閉じる">×</button></div>
+      <label>マップ名<input id="newMapName" type="text" maxlength="80" value="新しいフロー" required></label>
+      <div id="templateList" class="template-list"></div>
+      <div class="dialog-actions"><button class="button secondary dialog-close" type="button">キャンセル</button><button class="button primary" type="submit">作成する</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dataDialog" class="dialog">
+    <div class="dialog-head"><div><span class="eyebrow">持ち運び・バックアップ</span><h2>JSONで保存・読込</h2></div><button class="dialog-close icon-button" type="button" aria-label="閉じる">×</button></div>
+    <div class="data-actions">
+      <button id="exportButton" class="data-card" type="button"><span class="data-icon">↓</span><span><b>JSONで保存</b><small>いま開いているマップを書き出します</small></span></button>
+      <label class="data-card"><span class="data-icon">↑</span><span><b>JSONを読み込む</b><small>別の端末で作ったマップも開けます</small></span><input id="importInput" type="file" accept="application/json,.json" hidden></label>
+      <button id="resetAppButton" class="data-card reset-card" type="button"><span class="data-icon">↺</span><span><b>すべて初期化</b><small>保存済みフローと設定を最初の状態へ戻します</small></span></button>
+    </div>
+    <p class="privacy-note">データは外部へ送信されません。ブラウザ内だけで保存・処理します。</p>
+  </dialog>
+
+  <dialog id="confirmDialog" class="dialog confirm-dialog">
+    <h2 id="confirmTitle">確認</h2><p id="confirmMessage"></p>
+    <div class="dialog-actions"><button id="confirmCancel" class="button secondary" type="button">キャンセル</button><button id="confirmOk" class="button danger" type="button">削除する</button></div>
+  </dialog>
+
+  <div id="runPanel" class="run-panel" hidden>
+    <div class="run-top"><button id="runExitButton" class="button secondary" type="button">← マップへ戻る</button><span id="runProgress"></span><button id="runPrintButton" class="button" type="button">印刷</button></div>
+    <main class="run-content"><div id="runCard" class="run-card"></div></main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="printSelectionBar" class="print-selection-bar" hidden>
+    <div><b id="printSelectionTitle"></b><span id="printSelectionText"></span></div>
+    <div><button id="printSelectionCancel" class="button secondary" type="button">キャンセル</button><button id="printSelectionConfirm" class="button primary" type="button">選択範囲を印刷</button></div>
+  </div>
+  <dialog id="runPrintDialog" class="dialog wide-dialog">
+    <div class="dialog-head"><div><span class="eyebrow">現在の系統</span><h2>印刷する項目を選ぶ</h2></div><button class="dialog-close icon-button" type="button" aria-label="閉じる">×</button></div>
+    <p class="print-dialog-help">印刷する系統にチェックを入れてください。チェックした項目につながる開始から全分岐の末端までを印刷します。</p>
+    <div id="runPrintList" class="print-check-list"></div>
+    <div class="dialog-actions"><button class="button secondary dialog-close" type="button">キャンセル</button><button id="runPrintConfirm" class="button primary" type="button">チェックした項目を印刷</button></div>
+  </dialog>
+  <section id="printSheet" class="print-sheet" aria-hidden="true"></section>
+  <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" hidden>
+    <div id="tutorialSpotlight" class="tutorial-spotlight"></div>
+    <section id="tutorialCard" class="tutorial-card">
+      <div class="tutorial-progress"><span id="tutorialStep"></span><button id="tutorialSkip" type="button">終了する</button></div>
+      <h2 id="tutorialTitle"></h2>
+      <p id="tutorialText"></p>
+      <div class="tutorial-actions"><button id="tutorialBack" class="button secondary" type="button">戻る</button><button id="tutorialNext" class="button primary" type="button">次へ</button></div>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
