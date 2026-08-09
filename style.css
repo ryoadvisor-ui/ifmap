@@ -108,4 +108,5 @@ label { display: block; margin-bottom: 15px; color: #344054; font-size: 12px; fo
 @media(max-width:760px){.list-page{padding:24px 14px 50px}.list-page-head{display:block}.list-sort{width:100%;margin-top:18px}.flow-list-card{grid-template-columns:1fr;gap:13px}.list-summary{overflow:auto}.flow-list-card>.button{width:100%}.mode-switch button{min-width:42px;padding-left:6px;padding-right:6px}}
 @media(max-width:760px){.tutorial-card{left:14px!important;right:14px!important;bottom:14px!important;top:auto!important;width:auto}.tutorial-button{font-size:0;width:40px;padding:0}.tutorial-button::first-letter{font-size:16px}}
 @media(max-width:760px){.node-port{width:28px;height:28px;border-width:4px}.input-port{top:-17px}.output-port.single{bottom:-16px}.port-unit .node-port{min-width:28px;min-height:28px}}
+@media(max-width:760px){.edge-hit{stroke-width:30}}
 @media(max-width:760px){.mobile-edit-button:not([hidden]){display:block;margin-right:auto;min-height:34px;padding:6px 10px;font-size:12px}.canvas-toolbar:has(.mobile-edit-button:not([hidden])){align-items:flex-start}.canvas-toolbar:has(.mobile-edit-button:not([hidden])) .zoom-controls{margin-left:8px}}

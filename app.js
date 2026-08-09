@@ -237,7 +237,7 @@
       const links = from.options.length ? from.options.map(o => ({ targetId:o.targetId, label:o.label, key:o.id })) : [{ targetId:from.targetId, label:'', key:'main' }];
       links.forEach(link => { const to=byId.get(link.targetId); if (!to) return; const p=edgePath(from,to,link.key); const active=state.activeEdge && state.activeEdge.from===from.id && state.activeEdge.key===link.key;
         const hit=svg('path',{d:p.d,class:'edge-hit','data-from':from.id,'data-key':link.key});
-        hit.addEventListener('click', event => { if (state.mode !== 'edit') return; event.stopPropagation(); disconnectEdge(from.id,link.key); });
+        hit.addEventListener('pointerdown',beginEdgeRewire);
         hit.addEventListener('mouseenter',()=>path.classList.add('hovered'));hit.addEventListener('mouseleave',()=>path.classList.remove('hovered'));
         const path=svg('path',{d:p.d,class:`edge${active?' active':''}`}); refs.edgeLayer.append(hit,path);
         if (link.label) { const width=Math.min(180,Math.max(44,link.label.length*13+20)); const rect=svg('rect',{x:p.labelX-width/2,y:p.labelY-13,width,height:26,class:'edge-label-bg'}); const text=svg('text',{x:p.labelX,y:p.labelY+1,class:'edge-label'}); text.textContent=link.label; refs.edgeLabelLayer.append(rect,text); }
@@ -251,6 +251,14 @@
 
   function draftPath(start,end){const distance=Math.max(55,Math.abs(end.y-start.y)*.45);return `M ${start.x} ${start.y} C ${start.x} ${start.y+distance}, ${end.x} ${end.y-distance}, ${end.x} ${end.y}`;}
   function disconnectEdge(fromId,key){const from=getNode(fromId);if(!from)return;snapshot();setLinkTarget(from,key,null);commit('接続を外しました');}
+  function beginEdgeRewire(event){if(state.mode!=='edit'||state.printMode||event.button!==0)return;event.preventDefault();event.stopPropagation();const fromId=event.currentTarget.dataset.from,key=event.currentTarget.dataset.key,from=getNode(fromId);if(!from)return;const currentTarget=key==='main'?from.targetId:from.options.find(o=>o.id===key)?.targetId,startX=event.clientX,startY=event.clientY,threshold=event.pointerType==='touch'?12:6;let moved=false;
+    try{refs.viewport.setPointerCapture(event.pointerId)}catch{}
+    const release=()=>{try{if(refs.viewport.hasPointerCapture(event.pointerId))refs.viewport.releasePointerCapture(event.pointerId)}catch{}};
+    const clear=()=>{document.querySelectorAll('.input-port').forEach(p=>p.classList.remove('connection-target'));state.connectionDraft=null;state.activeEdge=null;renderEdges()};
+    const move=e=>{if(e.pointerId!==event.pointerId||pinchSequencePointers.has(e.pointerId))return;if(!moved&&Math.hypot(e.clientX-startX,e.clientY-startY)<threshold)return;if(!moved){moved=true;state.activeEdge={from:fromId,key};document.querySelectorAll('.input-port').forEach(p=>{if(p.closest('.flow-node')?.dataset.id!==fromId)p.classList.add('connection-target')})}state.connectionDraft={fromId,key,pointer:clientToWorld(e.clientX,e.clientY)};renderEdges()};
+    const up=e=>{if(e.pointerId!==event.pointerId)return;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);release();if(!moved||pinchSequencePointers.has(e.pointerId)){clear();return;}const targetEl=findConnectionTarget(e.clientX,e.clientY,fromId,e.pointerType),targetId=targetEl?.closest('.flow-node')?.dataset.id||null;document.querySelectorAll('.input-port').forEach(p=>p.classList.remove('connection-target'));state.connectionDraft=null;state.activeEdge=null;if(targetId===currentTarget){renderEdges();return;}snapshot();setLinkTarget(from,key,targetId);commit(targetId?'接続先を変更しました':'接続を外しました')};
+    const cancel=e=>{if(e.pointerId!==event.pointerId)return;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);release();clear()};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);
+  }
 
   function highlightNext(node) {
     if (node.options.length) {
@@ -391,7 +399,7 @@
     {target:()=>$('.flow-node')||$('#canvasWrap'),title:'3. カードを並べる',text:'カードはドラッグして自由に移動できます。カードをクリックすると、右側に編集欄が開きます。',prepare:prepareTutorialEditor},
     {target:()=>$('#nodeForm:not([hidden])')||$('#inspector'),title:'4. 内容と状態を入力する',text:'タイトルや説明を入力し、作業を始めたら「処理中」、終わったら「処理済み」へ変更します。',prepare:prepareTutorialEditor},
     {target:()=>$('.date-field'),title:'5. 開始日と完了期限を設定する',text:'年・月・日を入力します。開始前は青、処理中は緑、期限を過ぎた未完了は赤で表示されます。',prepare:prepareTutorialEditor},
-    {target:()=>$('.flow-node .output-port')||$('.flow-node'),title:'6. カードを接続する',text:'カード下の出口から、別カード上の入口までドラッグすると矢印で接続できます。余白へドラッグすると外せます。',prepare:prepareTutorialEditor},
+    {target:()=>$('.flow-node .output-port')||$('.flow-node'),title:'6. カードを接続する',text:'カード下の出口から別カード上の入口までドラッグすると接続できます。導線そのものをドラッグして、つなぎ替えや接続解除もできます。',prepare:prepareTutorialEditor},
     {target:()=>$('#questionOptions'),title:'7. 必要な場所だけ分岐する',text:'「選択肢を追加」で、はい・いいえなどの分岐を作れます。選択肢ごとに別の出口が表示されます。',prepare:prepareTutorialEditor},
     {target:()=>$('.mode-switch [data-mode="list"]'),title:'8. 全フローを一覧で確認する',text:'上部の「一覧」を押すと、各フローの先頭と次に対応する項目をまとめて確認できます。状態や日付で並べ替えもできます。',prepare:()=>setMode('edit')},
     {target:()=>$('.mode-switch [data-mode="run"]'),title:'9. 実際の流れを実行する',text:'実行モードではカードを1つずつ進みます。分岐の選択肢を選び、実際の判断支援として使えます。'},
