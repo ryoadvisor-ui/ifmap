@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="判断や作業手順を、かんたんに作成・共有できる静的Webアプリ">
   <title>カスタムフローチャート</title>
-  <link rel="stylesheet" href="style.css?v=1.4.3">
+  <link rel="stylesheet" href="style.css?v=1.4.4">
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -53,6 +53,7 @@
       <section class="canvas-wrap" id="canvasWrap">
         <div class="canvas-toolbar">
           <span id="modeHint">カードをドラッグして並べ替え</span>
+          <button id="mobileEditButton" class="button primary mobile-edit-button" type="button" hidden>この項目を編集</button>
           <div class="zoom-controls">
             <button id="zoomOutButton" type="button" aria-label="縮小">−</button>
             <button id="zoomResetButton" type="button" aria-label="表示倍率を戻す">100%</button>
@@ -78,6 +79,9 @@
               <g id="edgeLayer"></g>
             </svg>
             <div id="nodeLayer"></div>
+            <svg id="connectionLabels" class="connection-labels" width="3200" height="2400" aria-hidden="true">
+              <g id="edgeLabelLayer"></g>
+            </svg>
           </div>
         </div>
         <div id="selectionBox" class="selection-box" hidden></div>
@@ -189,6 +193,6 @@
       <div class="tutorial-actions"><button id="tutorialBack" class="button secondary" type="button">戻る</button><button id="tutorialNext" class="button primary" type="button">次へ</button></div>
     </section>
   </div>
-  <script src="app.js?v=1.4.3"></script>
+  <script src="app.js?v=1.4.4"></script>
 </body>
 </html>
