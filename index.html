@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="判断や作業手順を、かんたんに作成・共有できる静的Webアプリ">
   <title>カスタムフローチャート</title>
-  <link rel="stylesheet" href="style.css?v=1.4.8">
+  <link rel="stylesheet" href="style.css?v=1.5.0">
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -69,11 +69,11 @@
           <div id="world" class="world">
             <svg id="connections" class="connections" width="3200" height="2400" aria-hidden="true">
               <defs>
-                <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
-                  <path d="M0,0 L9,3.5 L0,7 Z" fill="#8b98a9"></path>
+                <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="16" viewBox="0 0 26 16" refX="25" refY="8" orient="auto">
+                  <path d="M2,1 L13,8 L2,15 Z" fill="#8b98a9"></path>
                 </marker>
-                <marker id="arrow-active" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
-                  <path d="M0,0 L9,3.5 L0,7 Z" fill="#2563eb"></path>
+                <marker id="arrow-active" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="16" viewBox="0 0 26 16" refX="25" refY="8" orient="auto">
+                  <path d="M2,1 L13,8 L2,15 Z" fill="#2563eb"></path>
                 </marker>
               </defs>
               <g id="edgeLayer"></g>
@@ -193,6 +193,6 @@
       <div class="tutorial-actions"><button id="tutorialBack" class="button secondary" type="button">戻る</button><button id="tutorialNext" class="button primary" type="button">次へ</button></div>
     </section>
   </div>
-  <script src="app.js?v=1.4.8"></script>
+  <script src="app.js?v=1.5.0"></script>
 </body>
 </html>

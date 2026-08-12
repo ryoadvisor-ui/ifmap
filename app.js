@@ -218,7 +218,11 @@
   function portPosition(nodeId, selector, fallback) {
     const node = getNode(nodeId), el = refs.nodeLayer.querySelector(`[data-id="${nodeId}"]`), port = el?.querySelector(selector);
     if (!node || !el || !port) return fallback(node);
-    return { x: node.x + port.offsetLeft + port.offsetWidth / 2, y: node.y + port.offsetTop + port.offsetHeight / 2 };
+    // offsetLeft/offsetTop は直近の親要素を基準にするため、選択肢の出口が
+    // 入れ子になった場合や translate で中央寄せした穴では中心がずれる。
+    // 画面上に描画された穴そのものの中心を取得し、キャンバス座標へ戻す。
+    const rect = port.getBoundingClientRect();
+    return clientToWorld((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
   }
   function edgePath(a, b, key = 'main') {
     const start = portPosition(a.id, `.output-port[data-key="${key}"]`, n => ({ x:n.x+(n.type==='question'?140:120), y:n.y+estimateHeight(n) }));
@@ -374,8 +378,8 @@
     const minX=Math.min(...nodes.map(n=>n.x)),minY=Math.min(...nodes.map(n=>n.y)),maxX=Math.max(...nodes.map(n=>n.x+sizes.get(n.id).w)),maxY=Math.max(...nodes.map(n=>n.y+sizes.get(n.id).h)),pad=70,w=maxX-minX+pad*2,h=maxY-minY+pad*2,scale=Math.min(1.3,960/w,580/h);
     refs.printSheet.replaceChildren();const page=document.createElement('div');page.className='print-flow-page';const heading=document.createElement('h1');heading.className='print-flow-title';heading.textContent=title;page.appendChild(heading);
     const stage=document.createElement('div');stage.className='print-flow-stage';stage.style.width=`${w}px`;stage.style.height=`${h}px`;stage.style.transform=`translate(-50%,-46%) scale(${scale})`;
-    const lines=svg('svg',{width:w,height:h}),labels=svg('svg',{width:w,height:h,class:'print-label-layer'}),defs=svg('defs'),marker=svg('marker',{id:'print-arrow',markerWidth:9,markerHeight:7,refX:8,refY:3.5,orient:'auto'});
-    marker.appendChild(svg('path',{d:'M0,0 L9,3.5 L0,7 Z',fill:'#8b98a9'}));defs.appendChild(marker);lines.appendChild(defs);
+    const lines=svg('svg',{width:w,height:h}),labels=svg('svg',{width:w,height:h,class:'print-label-layer'}),defs=svg('defs'),marker=svg('marker',{id:'print-arrow',markerUnits:'userSpaceOnUse',markerWidth:26,markerHeight:16,viewBox:'0 0 26 16',refX:25,refY:8,orient:'auto'});
+    marker.appendChild(svg('path',{d:'M2,1 L13,8 L2,15 Z',fill:'#8b98a9'}));defs.appendChild(marker);lines.appendChild(defs);
     nodes.forEach(from=>{const links=from.options.length?from.options.map(o=>({targetId:o.targetId,label:o.label})):[{targetId:from.targetId,label:''}];links.forEach(link=>{const to=map.nodes.find(n=>n.id===link.targetId);if(!to||!ids.has(to.id))return;const fs=sizes.get(from.id),ts=sizes.get(to.id),start={x:from.x-minX+pad+fs.w/2,y:from.y-minY+pad+fs.h},end={x:to.x-minX+pad+ts.w/2,y:to.y-minY+pad},curve=printCurve(start,end);lines.appendChild(svg('path',{d:curve.d,class:'edge','marker-end':'url(#print-arrow)'}));if(link.label){const x=curve.labelX,y=curve.labelY,width=Math.max(44,Math.min(180,link.label.length*13+20));labels.appendChild(svg('rect',{x:x-width/2,y:y-13,width,height:26,class:'edge-label-bg'}));const text=svg('text',{x,y:y+1,class:'edge-label'});text.textContent=link.label;labels.appendChild(text)}})});
     stage.append(lines,labels);nodes.forEach(n=>{const card=printableCard(n);card.classList.remove('selected','print-picked','highlighted');card.style.left=`${n.x-minX+pad}px`;card.style.top=`${n.y-minY+pad}px`;stage.appendChild(card)});page.appendChild(stage);refs.printSheet.appendChild(page);if(closeEditSelection)finishPrintSelection();sendToPrinter();return true;
   }
